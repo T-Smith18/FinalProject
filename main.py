@@ -52,11 +52,13 @@ class Player(pygame.sprite.Sprite):
  
         
         # Creates Player image
+        self.images=["FinalProject/resources/graphics/PlayerAnim_1.png","FinalProject/resources/graphics/PlayerAnim_2.png"]
         width = 40
         height = 60
         #self.image = pygame.Surface([width, height])
         self.image=pygame.image.load("FinalProject/resources/graphics/PlayerAnim_1.png")
         #self.image.fill(RED)
+        
  
         # Set a referance to the image rect.
         self.rect = self.image.get_rect()
@@ -142,6 +144,26 @@ class Player(pygame.sprite.Sprite):
     def stop(self):
         """ Called when the user lets off the keyboard. """
         self.change_x = 0
+
+class Boss(pygame.sprite.Sprite):
+    """Class for the boss monster"""
+    def __init__(self):
+
+        super().__init__()
+
+        width = 70
+        height = 112
+        self.image=pygame.image.load("FinalProject/resources/graphics/BossIdle.png")
+        
+ 
+        # Set a referance to the image rect.
+        self.rect = self.image.get_rect()
+
+        
+
+        
+        
+
  
  
 class Platform(pygame.sprite.Sprite):
@@ -164,21 +186,23 @@ class Level(object):
         Create a child class for each level with level-specific
         info. """
  
-    def __init__(self, player):
+    def __init__(self, player,boss):
         """ Constructor. Pass in a handle to player. Needed for when moving platforms
             collide with the player. """
         self.platform_list = pygame.sprite.Group()
         self.enemy_list = pygame.sprite.Group()
         self.player = player
+        self.boss = boss
          
         # Background image
-        self.background = None
+        self.background = pygame.image.load("FinalProject/resources/graphics/Forestbg.png")
  
     # Update everythign on this level
     def update(self):
         """ Update everything in this level."""
         self.platform_list.update()
         self.enemy_list.update()
+        self.boss.update()
  
     def draw(self, screen):
         """ Draw everything on this level. """
@@ -195,11 +219,11 @@ class Level(object):
 class Level_01(Level):
     """ Definition for level 1. """
  
-    def __init__(self, player):
+    def __init__(self, player,boss):
         """ Create level 1. """
  
         # Call the parent constructor
-        Level.__init__(self, player)
+        super().__init__(player,boss)
  
         # Array with width, height, x, and y of platform,put platforms in here
         level = [[210, 20, 0, 530],
@@ -226,12 +250,15 @@ def main():
  
     pygame.display.set_caption("Boss Fight")
  
-    # Create the player
+    # Create the player 
     player = Player()
+    
+    #Create the Boss
+    boss=Boss()
  
     # Create all the levels
     level_list = []
-    level_list.append( Level_01(player) )
+    level_list.append( Level_01(player,boss) )
  
     # Set the current level
     current_level_no = 0
@@ -239,17 +266,20 @@ def main():
  
     active_sprite_list = pygame.sprite.Group()
     player.level = current_level
- 
+    
+    #position of player
     player.rect.x = 340
     player.rect.y = SCREEN_HEIGHT - player.rect.height
-    active_sprite_list.add(player)
+    active_sprite_list.add(player,boss)
+
+    #position of boss
+    boss.rect.x = 1000
+    boss.rect.y= SCREEN_HEIGHT - boss.rect.height
+
 
     def RightAnim():
         player.image = pygame.image.load('FinalProject/resources/graphics/PlayerAnim_1.png')
-        sleep(.1)
-        player.image= pygame.image.load('FinalProject/resources/graphics/PlayerAnim_2.png')
-        sleep(.1)
-        player.image= pygame.image.load('FinalProject/resources/graphics/PlayerAnim_3.png')
+        
  
     # Loop until the user clicks the close button.
     done = False
@@ -264,7 +294,7 @@ def main():
                 done = True
  
             if event.type == pygame.KEYDOWN:
-                while event.key == pygame.K_a:
+                if event.key == pygame.K_a:
                     player.go_left()
                     player.image= pygame.image.load('FinalProject/resources/graphics/PlayerAnimL_1.png')
                 if event.key == pygame.K_d:
@@ -299,8 +329,8 @@ def main():
  
         # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
  
-        # Limit to 60 frames per second
-        clock.tick(60)
+        # Limit to 30 frames per second
+        clock.tick(30)
  
         # Go ahead and update the screen with what we've drawn.
         pygame.display.flip()
