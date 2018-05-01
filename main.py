@@ -14,7 +14,11 @@ Explanation video: http://youtu.be/BCxWJgN4Nnc
 # Week 2: Made jumping circle
 # Week 3: Swapped template to one more suitable for project,read and broke and undid different parts, figured out how to use custom graphics 
 import pygame
+<<<<<<< HEAD
 from time import sleep
+=======
+from pyganim import *
+>>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
 from constants import *
 
 class Game:
@@ -30,8 +34,13 @@ class Game:
 
     def load_data(self):
         # Load data files
+<<<<<<< HEAD
         self.background = pygame.image.load("FinalProject/resources/graphics/Forestbg.png")
         self.spritesheet = Spritesheet("FinalProject/resources/graphics/AnimSprites.png")
+=======
+        self.background = pygame.image.load("resources/graphics/Forestbg.png")
+        self.spritesheet = Spritesheet("resources/graphics/AnimSprites.png")
+>>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
     
     def run(self):
         # Game Loop
@@ -85,19 +94,25 @@ class Game:
                     self.player.go_right()
                 if event.key == pygame.K_SPACE:
                     self.player.jump()
+<<<<<<< HEAD
                 if event.key == pygame.K_p:
                     self.player.go_punch()
 
+=======
+>>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
  
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_a and self.player.change_x < 0:
                     self.player.stop()
                 if event.key == pygame.K_d and self.player.change_x > 0:
                     self.player.stop()
+<<<<<<< HEAD
                 if event.key ==pygame.K_p:
                     self.player.stop_punch()
 
 
+=======
+>>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
     
     def draw(self):
         # Game Loop - Draw
@@ -140,8 +155,11 @@ class Player(pygame.sprite.Sprite):
         self.image = self.idle_frames[self.current_frame]
         self.change_x = 0
         self.change_y = 0
+<<<<<<< HEAD
         self.punching = False
         self.last = pygame.time.get_ticks
+=======
+>>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
         
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -168,12 +186,18 @@ class Player(pygame.sprite.Sprite):
         for frame in self.run_frames_r:
             frame.set_colorkey(BLACK)
             self.run_frames_l.append(pygame.transform.flip(frame,True,False))
+<<<<<<< HEAD
         self.jump_frames = [self.game.spritesheet.get_image(320, 320, 64, 64)]
         for frame in self.jump_frames:
             frame.set_colorkey(BLACK)
         self.punching_frames = [self.game.spritesheet.get_image(0,512,64,64)]
         for frame in self.punching_frames:
             frame.set_colorkey(BLACK)
+=======
+        self.jump_frames = [self.game.spritesheet.get_image(320, 192, 64, 64)]
+        for frame in self.jump_frames:
+            frame.set_colorkey(BLACK)
+>>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
  
     def update(self):
         # Gravity
@@ -225,6 +249,7 @@ class Player(pygame.sprite.Sprite):
  
     def animate(self):
         now = pygame.time.get_ticks()
+<<<<<<< HEAD
         if self.punching:
             if now - self.last_update > 300:
                 self.last_update = now
@@ -232,6 +257,8 @@ class Player(pygame.sprite.Sprite):
                 bottom = self.rect.bottom
                 self.image =self.punching_frames[self.current_frame]
                 self.rect.bottom = bottom
+=======
+>>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
         if self.running:
             if now - self.last_update > 100:
                 self.last_update = now
@@ -295,12 +322,19 @@ class Player(pygame.sprite.Sprite):
     def stop_punch(self):
         self.punching = False
 
+<<<<<<< HEAD
 
 
 class Boss(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         super().__init__()
         self.image = pygame.image.load("FinalProject/resources/graphics/BossIdle.png")
+=======
+class Boss(pygame.sprite.Sprite):
+    def __init__(self, game, x, y):
+        super().__init__()
+        self.image = pygame.image.load("resources/graphics/BossIdle.png")
+>>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
         self.rect = self.image.get_rect()
         self.rect.x = x
         if y > SCREEN_HEIGHT - self.rect.height:

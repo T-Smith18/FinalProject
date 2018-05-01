@@ -10,4 +10,8 @@ BLUE = (52, 52, 255)
 # Screen dimensions
 SCREEN_WIDTH = 1200
 SCREEN_HEIGHT = 600
+<<<<<<< HEAD
 FPS = 80
+=======
+FPS = 60
+>>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
