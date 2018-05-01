@@ -9,77 +9,192 @@ http://programarcadegames.com/python_examples/f.php?file=platform_jumper.py
  
 Explanation video: http://youtu.be/BCxWJgN4Nnc
  
-Part of a series:
-http://programarcadegames.com/python_examples/f.php?file=move_with_walls_example.py
-http://programarcadegames.com/python_examples/f.php?file=maze_runner.py
-http://programarcadegames.com/python_examples/f.php?file=platform_jumper.py
-http://programarcadegames.com/python_examples/f.php?file=platform_scroller.py
-http://programarcadegames.com/python_examples/f.php?file=platform_moving.py
-http://programarcadegames.com/python_examples/sprite_sheets/
 """
 #Week 1: Created Project Proposal
 # Week 2: Made jumping circle
 # Week 3: Swapped template to one more suitable for project,read and broke and undid different parts, figured out how to use custom graphics 
 import pygame
-from pyganim import *
 from time import sleep
+from constants import *
+
+class Game:
+    def __init__(self):
+        # initialize program
+        pygame.init()
+        self.size = [SCREEN_WIDTH, SCREEN_HEIGHT]
+        self.screen = pygame.display.set_mode(self.size)
+        pygame.display.set_caption("Boss Fight")
+        self.clock = pygame.time.Clock()
+        self.load_data()
+        self.running = True
+
+    def load_data(self):
+        # Load data files
+        self.background = pygame.image.load("FinalProject/resources/graphics/Forestbg.png")
+        self.spritesheet = Spritesheet("FinalProject/resources/graphics/AnimSprites.png")
+    
+    def run(self):
+        # Game Loop
+        self.playing = True
+        while self.playing:
+            self.clock.tick(FPS)
+            self.events()
+            self.update()
+            self.draw()
+    
+    def new(self):
+        # Start a new game
+        # Add empty sprite lists 
+        self.active_sprite_list = pygame.sprite.Group()
+        self.platform_list = pygame.sprite.Group()
+        
+        # Add Player and Boss
+        self.player = Player(self, 340, SCREEN_HEIGHT)
+        self.active_sprite_list.add(self.player)
+        self.boss = Boss(self, 1000, SCREEN_HEIGHT)
+        self.active_sprite_list.add(self.boss)
+
+        # Add platforms        
+        platform = Platform(210, 20,   0, 530)
+        self.active_sprite_list.add(platform)
+        self.platform_list.add(platform)
+        platform = Platform(210, 20, 200, 400)
+        self.active_sprite_list.add(platform)
+        self.platform_list.add(platform)
+        platform = Platform(210, 20, 600, 300)
+        self.active_sprite_list.add(platform)
+        self.platform_list.add(platform)
+        self.run()
+    
+    def update(self):
+        # Game Loop - Update
+        self.active_sprite_list.update()
+        self.player.update()
+    
+    def events(self):
+        for event in pygame.event.get():
+
+            if event.type == pygame.QUIT:
+                self.running = False
+                self.playing = False
+ 
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_a:
+                    self.player.go_left()
+                if event.key == pygame.K_d:
+                    self.player.go_right()
+                if event.key == pygame.K_SPACE:
+                    self.player.jump()
+                if event.key == pygame.K_p:
+                    self.player.go_punch()
 
  
-# Global constants
- 
-# Colors
-BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
-GREEN = (0, 255, 0)
-RED = (255, 52, 52)
-BLUE = (52, 52, 255)
- 
-# Screen dimensions
-SCREEN_WIDTH = 1200
-SCREEN_HEIGHT = 600
- 
- 
+            if event.type == pygame.KEYUP:
+                if event.key == pygame.K_a and self.player.change_x < 0:
+                    self.player.stop()
+                if event.key == pygame.K_d and self.player.change_x > 0:
+                    self.player.stop()
+                if event.key ==pygame.K_p:
+                    self.player.stop_punch()
+
+
+    
+    def draw(self):
+        # Game Loop - Draw
+        self.screen.blit(self.background, (0, 0))
+        self.active_sprite_list.draw(self.screen)
+        pygame.display.flip()
+
+    def show_start_screen(self):
+        # Show start screen
+        pass
+
+    def show_game_over_screen(self):
+        # Show game over screen
+        pass
+
+class Spritesheet:
+    # Class for loading and parsing sprite sheets
+    def __init__(self, filename):
+        self.spritesheet = pygame.image.load(filename)
+
+    def get_image(self, x, y, width, height):
+        # Grab an image out of a larger sprite sheet
+        image = pygame.Surface((width, height))
+        image.blit(self.spritesheet, (0, 0), (x, y, width, height))
+        return image
+
 class Player(pygame.sprite.Sprite):
-    """ This class represents the bar at the bottom that the player
-        controls. """
- 
-    # -- Methods
-    def __init__(self):
-        """ Constructor function """
- 
+    def __init__(self, game, x, y):
         # Call the parent's constructor
         super().__init__()
- 
-        
+       
         # Creates Player image
-        self.images=["FinalProject/resources/graphics/PlayerAnim_1.png","FinalProject/resources/graphics/PlayerAnim_2.png"]
-        width = 40
-        height = 60
-        #self.image = pygame.Surface([width, height])
-        self.image=pygame.image.load("FinalProject/resources/graphics/PlayerAnim_1.png")
-        #self.image.fill(RED)
+        self.game = game
         
- 
-        # Set a referance to the image rect.
-        self.rect = self.image.get_rect()
- 
-        # Set speed vector of player
+        self.running = False
+        self.jumping = False
+        self.current_frame = 0
+        self.last_update = 0
+        self.load_images()
+        self.image = self.idle_frames[self.current_frame]
         self.change_x = 0
         self.change_y = 0
+        self.punching = False
+        self.last = pygame.time.get_ticks
+        
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        if y > SCREEN_HEIGHT - self.rect.height:
+            y = SCREEN_HEIGHT - self.rect.height
+        self.rect.y = y
  
-        # List of sprites we can bump against
-        self.level = None
+    def load_images(self):
+        self.idle_frames = [self.game.spritesheet.get_image(  0, 0, 64, 64),
+                            self.game.spritesheet.get_image( 64, 0, 64, 64),
+                            self.game.spritesheet.get_image(128, 0, 64, 64),
+                            self.game.spritesheet.get_image(192, 0, 64, 64)]
+        for frame in self.idle_frames:
+            frame.set_colorkey(BLACK)
+        self.run_frames_r = [self.game.spritesheet.get_image(256,  0, 64, 64),
+                             self.game.spritesheet.get_image(320,  0, 64, 64),
+                             self.game.spritesheet.get_image(384,  0, 64, 64),
+                             self.game.spritesheet.get_image(448,  0, 64, 64),
+                             self.game.spritesheet.get_image(  0, 64, 64, 64),
+                             self.game.spritesheet.get_image( 64, 64, 64, 64),
+                             self.game.spritesheet.get_image(128, 64, 64, 64),
+                             self.game.spritesheet.get_image(192, 64, 64, 64)]
+        self.run_frames_l = []
+        for frame in self.run_frames_r:
+            frame.set_colorkey(BLACK)
+            self.run_frames_l.append(pygame.transform.flip(frame,True,False))
+        self.jump_frames = [self.game.spritesheet.get_image(320, 320, 64, 64)]
+        for frame in self.jump_frames:
+            frame.set_colorkey(BLACK)
+        self.punching_frames = [self.game.spritesheet.get_image(0,512,64,64)]
+        for frame in self.punching_frames:
+            frame.set_colorkey(BLACK)
  
     def update(self):
-        """ Move the player. """
         # Gravity
         self.calc_grav()
- 
+
+        if self.change_x == 0:
+            self.running = False
+        else:
+            self.running = True
+
         # Move left/right
         self.rect.x += self.change_x
+        
+        if self.rect.right < 0:
+            self.rect.x = SCREEN_WIDTH
+            
+        if self.rect.left > SCREEN_WIDTH:
+            self.rect.right = 0
  
         # See if we hit anything
-        block_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
+        block_hit_list = pygame.sprite.spritecollide(self, self.game.platform_list, False)
         for block in block_hit_list:
             # If we are moving right,
             # set our right side to the left side of the item we hit
@@ -88,13 +203,12 @@ class Player(pygame.sprite.Sprite):
             elif self.change_x < 0:
                 # Otherwise if we are moving left, do the opposite.
                 self.rect.left = block.rect.right
-                
  
         # Move up/down
         self.rect.y += self.change_y
  
         # Check and see if we hit anything
-        block_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
+        block_hit_list = pygame.sprite.spritecollide(self, self.game.platform_list, False)
         for block in block_hit_list:
  
             # Reset our position based on the top/bottom of the object.
@@ -105,9 +219,45 @@ class Player(pygame.sprite.Sprite):
  
             # Stop our vertical movement
             self.change_y = 0
+            self.jumping = False
+
+        self.animate()
+ 
+    def animate(self):
+        now = pygame.time.get_ticks()
+        if self.punching:
+            if now - self.last_update > 300:
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.punching_frames)
+                bottom = self.rect.bottom
+                self.image =self.punching_frames[self.current_frame]
+                self.rect.bottom = bottom
+        if self.running:
+            if now - self.last_update > 100:
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.run_frames_l)
+                bottom = self.rect.bottom
+                if self.change_x > 0:
+                    self.image = self.run_frames_r[self.current_frame]
+                else:
+                    self.image = self.run_frames_l[self.current_frame]
+                self.rect.bottom = bottom
+        elif not self.jumping:
+            if now - self.last_update > 300:
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
+                bottom = self.rect.bottom
+                self.image = self.idle_frames[self.current_frame]
+                self.rect.bottom = bottom
+        else:
+            if now - self.last_update > 350:
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.jump_frames)
+                bottom = self.rect.bottom
+                self.image = self.jump_frames[self.current_frame]
+                self.rect.bottom = bottom
  
     def calc_grav(self):
-        """ Calculate effect of gravity. """
         if self.change_y == 0:
             self.change_y = 1
         else:
@@ -119,223 +269,62 @@ class Player(pygame.sprite.Sprite):
             self.rect.y = SCREEN_HEIGHT - self.rect.height
  
     def jump(self):
-        """ Called when user hits 'jump' button. """
- 
         # move down a bit and see if there is a platform below us.
         # Move down 2 pixels because it doesn't work well if we only move down
         # 1 when working with a platform moving down.
         self.rect.y += 2
-        platform_hit_list = pygame.sprite.spritecollide(self, self.level.platform_list, False)
+        platform_hit_list = pygame.sprite.spritecollide(self, self.game.platform_list, False)
         self.rect.y -= 2
  
         # If it is ok to jump, set our speed upwards
         if len(platform_hit_list) > 0 or self.rect.bottom >= SCREEN_HEIGHT:
             self.change_y = -10
+            self.jumping = True
  
     # Player-controlled movement:
     def go_left(self):
-        """ Called when the user hits the left arrow. """
         self.change_x = -6
  
     def go_right(self):
-        """ Called when the user hits the right arrow. """
         self.change_x = 6
  
     def stop(self):
-        """ Called when the user lets off the keyboard. """
         self.change_x = 0
+    def go_punch(self):
+        self.punching = True
+    def stop_punch(self):
+        self.punching = False
+
+
 
 class Boss(pygame.sprite.Sprite):
-    """Class for the boss monster"""
-    def __init__(self):
-
+    def __init__(self, game, x, y):
         super().__init__()
-
-        width = 70
-        height = 112
-        self.image=pygame.image.load("FinalProject/resources/graphics/BossIdle.png")
-        
- 
-        # Set a referance to the image rect.
+        self.image = pygame.image.load("FinalProject/resources/graphics/BossIdle.png")
         self.rect = self.image.get_rect()
+        self.rect.x = x
+        if y > SCREEN_HEIGHT - self.rect.height:
+            y = SCREEN_HEIGHT - self.rect.height
+        self.rect.y = y
+        self.game = game
 
-        
-
-        
-        
-
- 
- 
 class Platform(pygame.sprite.Sprite):
-    """ Platform the user can jump on """
- 
-    def __init__(self, width, height):
-        """ Platform constructor. Assumes constructed with user passing in
-            an array of 5 numbers like what's defined at the top of this
-            code. """
+    def __init__(self, width, height, x, y):
         super().__init__()
- 
         self.image = pygame.Surface([width, height])
         self.image.fill(GREEN)
- 
         self.rect = self.image.get_rect()
- 
- 
-class Level(object):
-    """ This is a generic super-class used to define a level.
-        Create a child class for each level with level-specific
-        info. """
- 
-    def __init__(self, player,boss):
-        """ Constructor. Pass in a handle to player. Needed for when moving platforms
-            collide with the player. """
-        self.platform_list = pygame.sprite.Group()
-        self.enemy_list = pygame.sprite.Group()
-        self.player = player
-        self.boss = boss
-         
-        # Background image
-        self.background = pygame.image.load("FinalProject/resources/graphics/Forestbg.png")
- 
-    # Update everythign on this level
-    def update(self):
-        """ Update everything in this level."""
-        self.platform_list.update()
-        self.enemy_list.update()
-        self.boss.update()
- 
-    def draw(self, screen):
-        """ Draw everything on this level. """
- 
-        # Draw the background
-        screen.fill(BLUE)
- 
-        # Draw all the sprite lists that we have
-        self.platform_list.draw(screen)
-        self.enemy_list.draw(screen)
- 
- 
-# Create platforms for the level
-class Level_01(Level):
-    """ Definition for level 1. """
- 
-    def __init__(self, player,boss):
-        """ Create level 1. """
- 
-        # Call the parent constructor
-        super().__init__(player,boss)
- 
-        # Array with width, height, x, and y of platform,put platforms in here
-        level = [[210, 20, 0, 530],
-                 [210, 20, 200, 400],
-                 [210, 20, 600, 300],
-                 ]
- 
-        # Go through the array above and add platforms
-        for platform in level:
-            block = Platform(platform[0], platform[1])
-            block.rect.x = platform[2]
-            block.rect.y = platform[3]
-            block.player = self.player
-            self.platform_list.add(block)
- 
+        self.rect.x = x
+        self.rect.y = y
  
 def main():
-    """ Main Program """
-    pygame.init()
- 
-    # Set the height and width of the screen
-    size = [SCREEN_WIDTH, SCREEN_HEIGHT]
-    screen = pygame.display.set_mode(size)
- 
-    pygame.display.set_caption("Boss Fight")
- 
-    # Create the player 
-    player = Player()
-    
-    #Create the Boss
-    boss=Boss()
- 
-    # Create all the levels
-    level_list = []
-    level_list.append( Level_01(player,boss) )
- 
-    # Set the current level
-    current_level_no = 0
-    current_level = level_list[current_level_no]
- 
-    active_sprite_list = pygame.sprite.Group()
-    player.level = current_level
-    
-    #position of player
-    player.rect.x = 340
-    player.rect.y = SCREEN_HEIGHT - player.rect.height
-    active_sprite_list.add(player,boss)
+  
+    game = Game()
 
-    #position of boss
-    boss.rect.x = 1000
-    boss.rect.y= SCREEN_HEIGHT - boss.rect.height
-
-
-    def RightAnim():
-        player.image = pygame.image.load('FinalProject/resources/graphics/PlayerAnim_1.png')
-        
- 
-    # Loop until the user clicks the close button.
-    done = False
- 
-    # Used to manage how fast the screen updates
-    clock = pygame.time.Clock()
- 
-    # -------- Main Program Loop -----------
-    while not done:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                done = True
- 
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_a:
-                    player.go_left()
-                    player.image= pygame.image.load('FinalProject/resources/graphics/PlayerAnimL_1.png')
-                if event.key == pygame.K_d:
-                    player.go_right()
-                    RightAnim()
-                if event.key == pygame.K_SPACE:
-                    player.jump()
- 
-            if event.type == pygame.KEYUP:
-                if event.key == pygame.K_a and player.change_x < 0:
-                    player.stop()
-                if event.key == pygame.K_d and player.change_x > 0:
-                    player.stop()
- 
-        # Update the player.
-        active_sprite_list.update()
- 
-        # Update items in the level
-        current_level.update()
- 
-        # If the player gets near the right side, shift the world left (-x)
-        if player.rect.right > SCREEN_WIDTH:
-            player.rect.right = SCREEN_WIDTH
- 
-        # If the player gets near the left side, shift the world right (+x)
-        if player.rect.left < 0:
-            player.rect.left = 0
- 
-        # ALL CODE TO DRAW SHOULD GO BELOW THIS COMMENT
-        current_level.draw(screen)
-        active_sprite_list.draw(screen)
- 
-        # ALL CODE TO DRAW SHOULD GO ABOVE THIS COMMENT
- 
-        # Limit to 30 frames per second
-        clock.tick(30)
- 
-        # Go ahead and update the screen with what we've drawn.
-        pygame.display.flip()
- 
-    # Be IDLE friendly. If you forget this line, the program will 'hang'
+    game.show_start_screen()
+    while game.running:
+        game.new()
+        game.show_game_over_screen()
     # on exit.
     pygame.quit()
  
