@@ -14,11 +14,7 @@ Explanation video: http://youtu.be/BCxWJgN4Nnc
 # Week 2: Made jumping circle
 # Week 3: Swapped template to one more suitable for project,read and broke and undid different parts, figured out how to use custom graphics 
 import pygame
-<<<<<<< HEAD
 from time import sleep
-=======
-from pyganim import *
->>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
 from constants import *
 
 class Game:
@@ -34,13 +30,8 @@ class Game:
 
     def load_data(self):
         # Load data files
-<<<<<<< HEAD
         self.background = pygame.image.load("FinalProject/resources/graphics/Forestbg.png")
-        self.spritesheet = Spritesheet("FinalProject/resources/graphics/AnimSprites.png")
-=======
-        self.background = pygame.image.load("resources/graphics/Forestbg.png")
-        self.spritesheet = Spritesheet("resources/graphics/AnimSprites.png")
->>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
+        self.spritesheet = Spritesheet("FinalProject/resources/graphics/Hero.gif")
     
     def run(self):
         # Game Loop
@@ -50,6 +41,7 @@ class Game:
             self.events()
             self.update()
             self.draw()
+            
     
     def new(self):
         # Start a new game
@@ -63,7 +55,7 @@ class Game:
         self.boss = Boss(self, 1000, SCREEN_HEIGHT)
         self.active_sprite_list.add(self.boss)
 
-        # Add platforms        
+        # Add platforms        #(height, width, x, y)
         platform = Platform(210, 20,   0, 530)
         self.active_sprite_list.add(platform)
         self.platform_list.add(platform)
@@ -94,25 +86,19 @@ class Game:
                     self.player.go_right()
                 if event.key == pygame.K_SPACE:
                     self.player.jump()
-<<<<<<< HEAD
                 if event.key == pygame.K_p:
                     self.player.go_punch()
 
-=======
->>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
  
             if event.type == pygame.KEYUP:
                 if event.key == pygame.K_a and self.player.change_x < 0:
                     self.player.stop()
                 if event.key == pygame.K_d and self.player.change_x > 0:
                     self.player.stop()
-<<<<<<< HEAD
                 if event.key ==pygame.K_p:
                     self.player.stop_punch()
 
 
-=======
->>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
     
     def draw(self):
         # Game Loop - Draw
@@ -155,11 +141,9 @@ class Player(pygame.sprite.Sprite):
         self.image = self.idle_frames[self.current_frame]
         self.change_x = 0
         self.change_y = 0
-<<<<<<< HEAD
         self.punching = False
-        self.last = pygame.time.get_ticks
-=======
->>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
+        self.hp = 30
+        self.attack = 50
         
         self.rect = self.image.get_rect()
         self.rect.x = x
@@ -168,42 +152,37 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = y
  
     def load_images(self):
-        self.idle_frames = [self.game.spritesheet.get_image(  0, 0, 64, 64),
-                            self.game.spritesheet.get_image( 64, 0, 64, 64),
-                            self.game.spritesheet.get_image(128, 0, 64, 64),
-                            self.game.spritesheet.get_image(192, 0, 64, 64)]
+        # (x,y,height of sprite, width of sprite)
+        self.idle_frames = [self.game.spritesheet.get_image(  0, 0, 46, 50)]
         for frame in self.idle_frames:
             frame.set_colorkey(BLACK)
-        self.run_frames_r = [self.game.spritesheet.get_image(256,  0, 64, 64),
-                             self.game.spritesheet.get_image(320,  0, 64, 64),
-                             self.game.spritesheet.get_image(384,  0, 64, 64),
-                             self.game.spritesheet.get_image(448,  0, 64, 64),
-                             self.game.spritesheet.get_image(  0, 64, 64, 64),
-                             self.game.spritesheet.get_image( 64, 64, 64, 64),
-                             self.game.spritesheet.get_image(128, 64, 64, 64),
-                             self.game.spritesheet.get_image(192, 64, 64, 64)]
+        self.run_frames_r = [self.game.spritesheet.get_image(0, 150, 46, 50),
+                             self.game.spritesheet.get_image(46, 150, 46, 50),
+                             self.game.spritesheet.get_image(92, 150, 46, 50),
+                             self.game.spritesheet.get_image(138,  150, 46, 50),
+                             self.game.spritesheet.get_image(  184, 150, 46, 50),
+                             self.game.spritesheet.get_image( 230, 150, 46, 50),
+                             self.game.spritesheet.get_image(276, 150, 46, 50),
+                             self.game.spritesheet.get_image(322, 150, 46, 50)]
         self.run_frames_l = []
         for frame in self.run_frames_r:
             frame.set_colorkey(BLACK)
             self.run_frames_l.append(pygame.transform.flip(frame,True,False))
-<<<<<<< HEAD
-        self.jump_frames = [self.game.spritesheet.get_image(320, 320, 64, 64)]
+        self.jump_frames = [self.game.spritesheet.get_image(276, 0, 46, 50)]
         for frame in self.jump_frames:
             frame.set_colorkey(BLACK)
-        self.punching_frames = [self.game.spritesheet.get_image(0,512,64,64)]
+        self.punching_frames = [self.game.spritesheet.get_image(92,0,46,50),
+                                self.game.spritesheet.get_image(138,0,46,50),
+                                self.game.spritesheet.get_image(184,0,46,50),
+                                self.game.spritesheet.get_image(230,0,46,50)]
         for frame in self.punching_frames:
             frame.set_colorkey(BLACK)
-=======
-        self.jump_frames = [self.game.spritesheet.get_image(320, 192, 64, 64)]
-        for frame in self.jump_frames:
-            frame.set_colorkey(BLACK)
->>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
  
     def update(self):
         # Gravity
         self.calc_grav()
 
-        if self.change_x == 0:
+        if self.change_x == 0 or self.jumping == True:
             self.running = False
         else:
             self.running = True
@@ -246,21 +225,19 @@ class Player(pygame.sprite.Sprite):
             self.jumping = False
 
         self.animate()
+        self.player_hp()
  
     def animate(self):
         now = pygame.time.get_ticks()
-<<<<<<< HEAD
         if self.punching:
-            if now - self.last_update > 300:
+            if now - self.last_update > 50:
                 self.last_update = now
                 self.current_frame = (self.current_frame + 1) % len(self.punching_frames)
                 bottom = self.rect.bottom
                 self.image =self.punching_frames[self.current_frame]
                 self.rect.bottom = bottom
-=======
->>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
         if self.running:
-            if now - self.last_update > 100:
+            if now - self.last_update > 70:
                 self.last_update = now
                 self.current_frame = (self.current_frame + 1) % len(self.run_frames_l)
                 bottom = self.rect.bottom
@@ -270,14 +247,14 @@ class Player(pygame.sprite.Sprite):
                     self.image = self.run_frames_l[self.current_frame]
                 self.rect.bottom = bottom
         elif not self.jumping:
-            if now - self.last_update > 300:
+            if now - self.last_update > 100:
                 self.last_update = now
                 self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
                 bottom = self.rect.bottom
                 self.image = self.idle_frames[self.current_frame]
                 self.rect.bottom = bottom
         else:
-            if now - self.last_update > 350:
+            if now - self.last_update > 300:
                 self.last_update = now
                 self.current_frame = (self.current_frame + 1) % len(self.jump_frames)
                 bottom = self.rect.bottom
@@ -310,10 +287,10 @@ class Player(pygame.sprite.Sprite):
  
     # Player-controlled movement:
     def go_left(self):
-        self.change_x = -6
+        self.change_x = -5
  
     def go_right(self):
-        self.change_x = 6
+        self.change_x = 5
  
     def stop(self):
         self.change_x = 0
@@ -321,26 +298,34 @@ class Player(pygame.sprite.Sprite):
         self.punching = True
     def stop_punch(self):
         self.punching = False
+    def player_hp(self):
+        if self.hp > 20:
+            hp_color = GREEN
+        elif self.hp > 10:
+            hp_color = ORANGE
+        elif self.hp > 1:
+            hp_color = RED
+        elif self.hp <= 0:
+            pass
+        self.bar = pygame.draw.rect(self.game.screen, hp_color, (680,25,self.hp,25))
+        self.bar.fill(hp_color)
+            
 
-<<<<<<< HEAD
+        
+
 
 
 class Boss(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         super().__init__()
         self.image = pygame.image.load("FinalProject/resources/graphics/BossIdle.png")
-=======
-class Boss(pygame.sprite.Sprite):
-    def __init__(self, game, x, y):
-        super().__init__()
-        self.image = pygame.image.load("resources/graphics/BossIdle.png")
->>>>>>> ff7115b5f78c4aa71ce1ae87020698ea8ca45e16
         self.rect = self.image.get_rect()
         self.rect.x = x
         if y > SCREEN_HEIGHT - self.rect.height:
             y = SCREEN_HEIGHT - self.rect.height
         self.rect.y = y
         self.game = game
+        self.health = 100
 
 class Platform(pygame.sprite.Sprite):
     def __init__(self, width, height, x, y):
