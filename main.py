@@ -48,12 +48,14 @@ class Game:
         # Add empty sprite lists 
         self.active_sprite_list = pygame.sprite.Group()
         self.platform_list = pygame.sprite.Group()
+        self.boss_list = pygame.sprite.Group()
         
         # Add Player and Boss
         self.player = Player(self, 340, SCREEN_HEIGHT)
         self.active_sprite_list.add(self.player)
         self.boss = Boss(self, 1000, SCREEN_HEIGHT)
         self.active_sprite_list.add(self.boss)
+        self.boss_list.add(self.boss)
 
         # Add platforms        #(height, width, x, y)
         platform = Platform(210, 20,   0, 530)
@@ -87,7 +89,11 @@ class Game:
                 if event.key == pygame.K_SPACE:
                     self.player.jump()
                 if event.key == pygame.K_p:
-                    self.player.go_punch()
+                    #disables attacking while running or jumping
+                    if self.player.running == True or self.player.jumping == True:
+                        pass
+                    else:
+                        self.player.go_punch()
 
  
             if event.type == pygame.KEYUP:
@@ -96,7 +102,7 @@ class Game:
                 if event.key == pygame.K_d and self.player.change_x > 0:
                     self.player.stop()
                 if event.key ==pygame.K_p:
-                    self.player.stop_punch()
+                     self.player.stop_punch()
 
 
     
@@ -223,9 +229,11 @@ class Player(pygame.sprite.Sprite):
             # Stop our vertical movement
             self.change_y = 0
             self.jumping = False
+        if self.change_y == 0:
+            self.jumping = False
 
         self.animate()
-        self.player_hp()
+        
  
     def animate(self):
         now = pygame.time.get_ticks()
@@ -325,7 +333,7 @@ class Boss(pygame.sprite.Sprite):
             y = SCREEN_HEIGHT - self.rect.height
         self.rect.y = y
         self.game = game
-        self.health = 100
+        self.health = 1000
 
 class Platform(pygame.sprite.Sprite):
     def __init__(self, width, height, x, y):
