@@ -57,6 +57,10 @@ class Game:
         self.active_sprite_list.add(self.boss)
         self.boss_list.add(self.boss)
 
+        #Add Health Bar
+        self.player_hp = Health(self, 15, 15, 30)
+        self.active_sprite_list.add(self.player_hp)
+
         # Add platforms        #(height, width, x, y)
         platform = Platform(210, 20,   0, 530)
         self.active_sprite_list.add(platform)
@@ -73,6 +77,7 @@ class Game:
         # Game Loop - Update
         self.active_sprite_list.update()
         self.player.update()
+        self.player_hp.track_health()
     
     def events(self):
         for event in pygame.event.get():
@@ -148,7 +153,6 @@ class Player(pygame.sprite.Sprite):
         self.change_x = 0
         self.change_y = 0
         self.punching = False
-        self.hp = 30
         self.attack = 50
         
         self.rect = self.image.get_rect()
@@ -156,7 +160,9 @@ class Player(pygame.sprite.Sprite):
         if y > SCREEN_HEIGHT - self.rect.height:
             y = SCREEN_HEIGHT - self.rect.height
         self.rect.y = y
- 
+    
+    #this is a function for storing the positions of a sprite
+    #within a spritesheet
     def load_images(self):
         # (x,y,height of sprite, width of sprite)
         self.idle_frames = [self.game.spritesheet.get_image(  0, 0, 46, 50)]
@@ -306,17 +312,28 @@ class Player(pygame.sprite.Sprite):
         self.punching = True
     def stop_punch(self):
         self.punching = False
-    def player_hp(self):
-        if self.hp > 20:
-            hp_color = GREEN
-        elif self.hp > 10:
-            hp_color = ORANGE
-        elif self.hp > 1:
-            hp_color = RED
-        elif self.hp <= 0:
-            pass
-        self.bar = pygame.draw.rect(self.game.screen, hp_color, (680,25,self.hp,25))
-        self.bar.fill(hp_color)
+
+class Health(pygame.sprite.Sprite):
+    #health bar constructor class, made by me
+    def __init__(self, game, x, y, hp):
+        super().__init__()
+        self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/6.png")
+        self.rect = self.image.get_rect()
+        self.rect.x = x 
+        self.rect.y = y 
+        self.game = game
+        self.hp =hp
+    def track_health(self):
+        if self.hp < 1:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/0.png")
+        elif self.hp < 5:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/1.png")
+        elif self.hp < 10:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/2.png")
+        elif self.hp < 15:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/3.png")
+
+
             
 
         
@@ -326,7 +343,7 @@ class Player(pygame.sprite.Sprite):
 class Boss(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         super().__init__()
-        self.image = pygame.image.load("FinalProject/resources/graphics/BossIdle.png")
+        self.image = self.idle_frames[self.current_frame]
         self.rect = self.image.get_rect()
         self.rect.x = x
         if y > SCREEN_HEIGHT - self.rect.height:
@@ -334,8 +351,75 @@ class Boss(pygame.sprite.Sprite):
         self.rect.y = y
         self.game = game
         self.health = 1000
+        self.running  = False
+        self.jumping = False
+    #this is a function for storing the positions of a sprite
+    #within a spritesheet
+    def load_images(self):
+        # (x,y,height of sprite, width of sprite)
+        self.idle_frames = [self.game.spritesheet.get_image(  0, 0, 46, 50)]
+        for frame in self.idle_frames:
+            frame.set_colorkey(BLACK)
+        self.run_frames_r = [self.game.spritesheet.get_image(0, 150, 46, 50),
+                             self.game.spritesheet.get_image(46, 150, 46, 50),
+                             self.game.spritesheet.get_image(92, 150, 46, 50),
+                             self.game.spritesheet.get_image(138,  150, 46, 50),
+                             self.game.spritesheet.get_image(  184, 150, 46, 50),
+                             self.game.spritesheet.get_image( 230, 150, 46, 50),
+                             self.game.spritesheet.get_image(276, 150, 46, 50),
+                             self.game.spritesheet.get_image(322, 150, 46, 50)]
+        self.run_frames_l = []
+        for frame in self.run_frames_r:
+            frame.set_colorkey(BLACK)
+            self.run_frames_l.append(pygame.transform.flip(frame,True,False))
+        self.jump_frames = [self.game.spritesheet.get_image(276, 0, 46, 50)]
+        for frame in self.jump_frames:
+            frame.set_colorkey(BLACK)
+        self.punching_frames = [self.game.spritesheet.get_image(92,0,46,50),
+                                self.game.spritesheet.get_image(138,0,46,50),
+                                self.game.spritesheet.get_image(184,0,46,50),
+                                self.game.spritesheet.get_image(230,0,46,50)]
+        for frame in self.punching_frames:
+            frame.set_colorkey(BLACK)
+        
+    def animate(self):
+        now = pygame.time.get_ticks()
+        if self.punching:
+            if now - self.last_update > 50:
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.punching_frames)
+                bottom = self.rect.bottom
+                self.image =self.punching_frames[self.current_frame]
+                self.rect.bottom = bottom
+        if self.running:
+            if now - self.last_update > 70:
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.run_frames_l)
+                bottom = self.rect.bottom
+                if self.change_x > 0:
+                    self.image = self.run_frames_r[self.current_frame]
+                else:
+                    self.image = self.run_frames_l[self.current_frame]
+                self.rect.bottom = bottom
+        elif not self.jumping:
+            if now - self.last_update > 100:
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
+                bottom = self.rect.bottom
+                self.image = self.idle_frames[self.current_frame]
+                self.rect.bottom = bottom
+        else:
+            if now - self.last_update > 300:
+                self.last_update = now
+                self.current_frame = (self.current_frame + 1) % len(self.jump_frames)
+                bottom = self.rect.bottom
+                self.image = self.jump_frames[self.current_frame]
+                self.rect.bottom = bottom
+
+            
 
 class Platform(pygame.sprite.Sprite):
+    #platform constructor class
     def __init__(self, width, height, x, y):
         super().__init__()
         self.image = pygame.Surface([width, height])
@@ -345,6 +429,7 @@ class Platform(pygame.sprite.Sprite):
         self.rect.y = y
  
 def main():
+    #the main loop
   
     game = Game()
 
