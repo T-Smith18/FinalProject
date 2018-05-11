@@ -14,7 +14,6 @@ Explanation video: http://youtu.be/BCxWJgN4Nnc
 # Week 2: Made jumping circle
 # Week 3: Swapped template to one more suitable for project,read and broke and undid different parts, figured out how to use custom graphics 
 import pygame
-from time import sleep
 from constants import *
 
 class Game:
@@ -32,6 +31,7 @@ class Game:
         # Load data files
         self.background = pygame.image.load("FinalProject/resources/graphics/Forestbg.png")
         self.spritesheet = Spritesheet("FinalProject/resources/graphics/Hero.gif")
+        self.ghostsprites = Spritesheet("FinalProject/resources/graphics/ghost.png")
     
     def run(self):
         # Game Loop
@@ -53,7 +53,7 @@ class Game:
         # Add Player and Boss
         self.player = Player(self, 340, SCREEN_HEIGHT)
         self.active_sprite_list.add(self.player)
-        self.boss = Boss(self, 1000, SCREEN_HEIGHT)
+        self.boss = Boss(self, 800, SCREEN_HEIGHT)
         self.active_sprite_list.add(self.boss)
         self.boss_list.add(self.boss)
 
@@ -142,7 +142,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
        
         # Creates Player image
-        self.game = game
+        self.game = game 
         
         self.running = False
         self.jumping = False
@@ -343,31 +343,34 @@ class Health(pygame.sprite.Sprite):
 class Boss(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         super().__init__()
+        self.game = game
+        self.load_images()
+        self.current_frame = 0
+        self.last_update = 0
         self.image = self.idle_frames[self.current_frame]
         self.rect = self.image.get_rect()
         self.rect.x = x
         if y > SCREEN_HEIGHT - self.rect.height:
             y = SCREEN_HEIGHT - self.rect.height
         self.rect.y = y
-        self.game = game
+        self.change_x = 0
+        self.change_y = 0
         self.health = 1000
         self.running  = False
         self.jumping = False
+        
     #this is a function for storing the positions of a sprite
     #within a spritesheet
     def load_images(self):
         # (x,y,height of sprite, width of sprite)
-        self.idle_frames = [self.game.spritesheet.get_image(  0, 0, 46, 50)]
+        self.idle_frames = [self.game.ghostsprites.get_image(  0, 128, 48, 64),
+                            self.game.ghostsprites.get_image(  48,128, 48, 64),
+                            self.game.ghostsprites.get_image(  96, 128, 48, 64)]
         for frame in self.idle_frames:
             frame.set_colorkey(BLACK)
-        self.run_frames_r = [self.game.spritesheet.get_image(0, 150, 46, 50),
-                             self.game.spritesheet.get_image(46, 150, 46, 50),
-                             self.game.spritesheet.get_image(92, 150, 46, 50),
-                             self.game.spritesheet.get_image(138,  150, 46, 50),
-                             self.game.spritesheet.get_image(  184, 150, 46, 50),
-                             self.game.spritesheet.get_image( 230, 150, 46, 50),
-                             self.game.spritesheet.get_image(276, 150, 46, 50),
-                             self.game.spritesheet.get_image(322, 150, 46, 50)]
+        self.run_frames_r = [self.game.spritesheet.get_image(0, 64, 48, 64),
+                             self.game.spritesheet.get_image(48, 64, 48, 643),
+                             self.game.spritesheet.get_image(96, 64, 48, 64),]
         self.run_frames_l = []
         for frame in self.run_frames_r:
             frame.set_colorkey(BLACK)
@@ -375,22 +378,9 @@ class Boss(pygame.sprite.Sprite):
         self.jump_frames = [self.game.spritesheet.get_image(276, 0, 46, 50)]
         for frame in self.jump_frames:
             frame.set_colorkey(BLACK)
-        self.punching_frames = [self.game.spritesheet.get_image(92,0,46,50),
-                                self.game.spritesheet.get_image(138,0,46,50),
-                                self.game.spritesheet.get_image(184,0,46,50),
-                                self.game.spritesheet.get_image(230,0,46,50)]
-        for frame in self.punching_frames:
-            frame.set_colorkey(BLACK)
         
     def animate(self):
         now = pygame.time.get_ticks()
-        if self.punching:
-            if now - self.last_update > 50:
-                self.last_update = now
-                self.current_frame = (self.current_frame + 1) % len(self.punching_frames)
-                bottom = self.rect.bottom
-                self.image =self.punching_frames[self.current_frame]
-                self.rect.bottom = bottom
         if self.running:
             if now - self.last_update > 70:
                 self.last_update = now
@@ -402,19 +392,37 @@ class Boss(pygame.sprite.Sprite):
                     self.image = self.run_frames_l[self.current_frame]
                 self.rect.bottom = bottom
         elif not self.jumping:
-            if now - self.last_update > 100:
+            if now - self.last_update > 200:
                 self.last_update = now
                 self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
                 bottom = self.rect.bottom
                 self.image = self.idle_frames[self.current_frame]
                 self.rect.bottom = bottom
         else:
-            if now - self.last_update > 300:
+            if now - self.last_update > 350:
                 self.last_update = now
                 self.current_frame = (self.current_frame + 1) % len(self.jump_frames)
                 bottom = self.rect.bottom
                 self.image = self.jump_frames[self.current_frame]
                 self.rect.bottom = bottom
+    def update(self):
+        # Gravity
+        #self.calc_grav()
+
+        if self.change_x == 0 or self.jumping == True:
+            self.running = False
+        else:
+            self.running = True
+
+        # Move left/right
+        self.rect.x += self.change_x
+        
+        if self.rect.right < 0:
+            self.rect.x = SCREEN_WIDTH
+            
+        if self.rect.left > SCREEN_WIDTH:
+            self.rect.right = 0
+        self.animate()
 
             
 
