@@ -6,7 +6,7 @@ http://simpson.edu/computer-science/
  
 From:
 http://programarcadegames.com/python_examples/f.php?file=platform_jumper.py
- 
+http://programarcadegames.com/python_examples/f.php?file=bullets.py 
 Explanation video: http://youtu.be/BCxWJgN4Nnc
  
 """
@@ -15,6 +15,7 @@ Explanation video: http://youtu.be/BCxWJgN4Nnc
 # Week 3: Swapped template to one more suitable for project,read and broke and undid different parts, figured out how to use custom graphics 
 import pygame
 from constants import *
+import math
 
 class Game:
     def __init__(self):
@@ -26,12 +27,13 @@ class Game:
         self.clock = pygame.time.Clock()
         self.load_data()
         self.running = True
+        self.won = False
 
     def load_data(self):
         # Load data files
-        self.background = pygame.image.load("FinalProject/resources/graphics/Forestbg.png")
+        self.ghostsprites = Spritesheet("FinalProject/resources/graphics/ghost.png", 2)
         self.spritesheet = Spritesheet("FinalProject/resources/graphics/Hero.gif")
-        self.ghostsprites = Spritesheet("FinalProject/resources/graphics/ghost.png")
+        self.background = pygame.image.load("FinalProject/resources/graphics/Forestbg.png")
     
     def run(self):
         # Game Loop
@@ -41,7 +43,6 @@ class Game:
             self.events()
             self.update()
             self.draw()
-            
     
     def new(self):
         # Start a new game
@@ -49,11 +50,12 @@ class Game:
         self.active_sprite_list = pygame.sprite.Group()
         self.platform_list = pygame.sprite.Group()
         self.boss_list = pygame.sprite.Group()
+        self.bullet_list = pygame.sprite.Group()
         
         # Add Player and Boss
         self.player = Player(self, 340, SCREEN_HEIGHT)
         self.active_sprite_list.add(self.player)
-        self.boss = Boss(self, 800, SCREEN_HEIGHT)
+        self.boss = Boss(self, 800, 200)
         self.active_sprite_list.add(self.boss)
         self.boss_list.add(self.boss)
 
@@ -62,13 +64,13 @@ class Game:
         self.active_sprite_list.add(self.player_hp)
 
         # Add platforms        #(height, width, x, y)
-        platform = Platform(210, 20,   0, 530)
+        platform = Platform(210, 20,   0, 550)
         self.active_sprite_list.add(platform)
         self.platform_list.add(platform)
         platform = Platform(210, 20, 200, 400)
         self.active_sprite_list.add(platform)
         self.platform_list.add(platform)
-        platform = Platform(210, 20, 600, 300)
+        platform = Platform(210, 20, 600, 500)
         self.active_sprite_list.add(platform)
         self.platform_list.add(platform)
         self.run()
@@ -78,6 +80,12 @@ class Game:
         self.active_sprite_list.update()
         self.player.update()
         self.player_hp.track_health()
+        if self.boss.hp <= 0:
+            self.playing = False
+            self.won = True
+        elif self.player_hp.hp <= 0:
+            self.playing = False
+            self.won = False
     
     def events(self):
         for event in pygame.event.get():
@@ -86,7 +94,7 @@ class Game:
                 self.running = False
                 self.playing = False
  
-            if event.type == pygame.KEYDOWN:
+            elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_a:
                     self.player.go_left()
                 if event.key == pygame.K_d:
@@ -98,18 +106,17 @@ class Game:
                     if self.player.running == True or self.player.jumping == True:
                         pass
                     else:
-                        self.player.go_punch()
+                        self.player.go_attack()
 
  
-            if event.type == pygame.KEYUP:
+            elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_a and self.player.change_x < 0:
                     self.player.stop()
                 if event.key == pygame.K_d and self.player.change_x > 0:
                     self.player.stop()
                 if event.key ==pygame.K_p:
-                     self.player.stop_punch()
-
-
+                    self.player.stop_attack()
+                    
     
     def draw(self):
         # Game Loop - Draw
@@ -123,17 +130,23 @@ class Game:
 
     def show_game_over_screen(self):
         # Show game over screen
+        if self.won:
+            print("YOU WON")
+        else:
+            print("YOU LOSE")
         pass
 
 class Spritesheet:
     # Class for loading and parsing sprite sheets
-    def __init__(self, filename):
+    def __init__(self, filename, scale = 1):
         self.spritesheet = pygame.image.load(filename)
+        self.scale = scale
 
     def get_image(self, x, y, width, height):
         # Grab an image out of a larger sprite sheet
         image = pygame.Surface((width, height))
         image.blit(self.spritesheet, (0, 0), (x, y, width, height))
+        image = pygame.transform.scale(image, (width * self.scale, height * self.scale))
         return image
 
 class Player(pygame.sprite.Sprite):
@@ -146,13 +159,14 @@ class Player(pygame.sprite.Sprite):
         
         self.running = False
         self.jumping = False
+        self.attacking = False
+        self.direction = 0
         self.current_frame = 0
         self.last_update = 0
         self.load_images()
-        self.image = self.idle_frames[self.current_frame]
+        self.image = self.idle_frames_r[self.current_frame]
         self.change_x = 0
         self.change_y = 0
-        self.punching = False
         self.attack = 50
         
         self.rect = self.image.get_rect()
@@ -162,12 +176,15 @@ class Player(pygame.sprite.Sprite):
         self.rect.y = y
     
     #this is a function for storing the positions of a sprite
-    #within a spritesheet
+    #within a sprite sheet
     def load_images(self):
         # (x,y,height of sprite, width of sprite)
-        self.idle_frames = [self.game.spritesheet.get_image(  0, 0, 46, 50)]
-        for frame in self.idle_frames:
+        self.idle_frames_r = [self.game.spritesheet.get_image(  0, 0, 46, 50)]
+        self.idle_frames_l = []
+        for frame in self.idle_frames_r:
             frame.set_colorkey(BLACK)
+            self.idle_frames_l.append(pygame.transform.flip(frame,True,False))
+            
         self.run_frames_r = [self.game.spritesheet.get_image(0, 150, 46, 50),
                              self.game.spritesheet.get_image(46, 150, 46, 50),
                              self.game.spritesheet.get_image(92, 150, 46, 50),
@@ -180,15 +197,21 @@ class Player(pygame.sprite.Sprite):
         for frame in self.run_frames_r:
             frame.set_colorkey(BLACK)
             self.run_frames_l.append(pygame.transform.flip(frame,True,False))
-        self.jump_frames = [self.game.spritesheet.get_image(276, 0, 46, 50)]
-        for frame in self.jump_frames:
+            
+        self.jump_frames_r = [self.game.spritesheet.get_image(276, 0, 46, 50)]
+        self.jump_frames_l = []
+        for frame in self.jump_frames_r:
             frame.set_colorkey(BLACK)
-        self.punching_frames = [self.game.spritesheet.get_image(92,0,46,50),
-                                self.game.spritesheet.get_image(138,0,46,50),
-                                self.game.spritesheet.get_image(184,0,46,50),
-                                self.game.spritesheet.get_image(230,0,46,50)]
-        for frame in self.punching_frames:
+            self.jump_frames_l.append(pygame.transform.flip(frame,True,False))
+            
+        self.attacking_frames_r = [self.game.spritesheet.get_image(92,0,46,50),
+                                    self.game.spritesheet.get_image(138,0,46,50),
+                                    self.game.spritesheet.get_image(184,0,46,50),
+                                    self.game.spritesheet.get_image(230,0,46,50)]
+        self.attacking_frames_l = []
+        for frame in self.attacking_frames_r:
             frame.set_colorkey(BLACK)
+            self.attacking_frames_l.append(pygame.transform.flip(frame,True,False))
  
     def update(self):
         # Gravity
@@ -225,16 +248,21 @@ class Player(pygame.sprite.Sprite):
         # Check and see if we hit anything
         block_hit_list = pygame.sprite.spritecollide(self, self.game.platform_list, False)
         for block in block_hit_list:
- 
             # Reset our position based on the top/bottom of the object.
             if self.change_y > 0:
                 self.rect.bottom = block.rect.top
             elif self.change_y < 0:
                 self.rect.top = block.rect.bottom
- 
             # Stop our vertical movement
             self.change_y = 0
             self.jumping = False
+
+        # check if the boss hits the player
+        boss_hit_list = pygame.sprite.spritecollide(self, self.game.boss_list, False)
+        for boss in boss_hit_list:
+            self.game.player_hp.hp -= 5
+            boss.reset()
+ 
         if self.change_y == 0:
             self.jumping = False
 
@@ -243,12 +271,15 @@ class Player(pygame.sprite.Sprite):
  
     def animate(self):
         now = pygame.time.get_ticks()
-        if self.punching:
+        if self.attacking:
             if now - self.last_update > 50:
                 self.last_update = now
-                self.current_frame = (self.current_frame + 1) % len(self.punching_frames)
+                self.current_frame = (self.current_frame + 1) % len(self.attacking_frames_r)
                 bottom = self.rect.bottom
-                self.image =self.punching_frames[self.current_frame]
+                if self.direction == 0:
+                    self.image = self.attacking_frames_r[self.current_frame]
+                else:
+                    self.image = self.attacking_frames_l[self.current_frame]
                 self.rect.bottom = bottom
         if self.running:
             if now - self.last_update > 70:
@@ -263,23 +294,29 @@ class Player(pygame.sprite.Sprite):
         elif not self.jumping:
             if now - self.last_update > 100:
                 self.last_update = now
-                self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
+                self.current_frame = (self.current_frame + 1) % len(self.idle_frames_r)
                 bottom = self.rect.bottom
-                self.image = self.idle_frames[self.current_frame]
+                if self.direction == 0:
+                    self.image = self.idle_frames_r[self.current_frame]
+                else:
+                    self.image = self.idle_frames_l[self.current_frame]
                 self.rect.bottom = bottom
         else:
             if now - self.last_update > 300:
                 self.last_update = now
-                self.current_frame = (self.current_frame + 1) % len(self.jump_frames)
+                self.current_frame = (self.current_frame + 1) % len(self.jump_frames_r)
                 bottom = self.rect.bottom
-                self.image = self.jump_frames[self.current_frame]
+                if self.direction == 0:
+                    self.image = self.jump_frames_r[self.current_frame]
+                else:
+                    self.image = self.jump_frames_l[self.current_frame]
                 self.rect.bottom = bottom
  
     def calc_grav(self):
         if self.change_y == 0:
             self.change_y = 1
         else:
-            self.change_y += .35
+            self.change_y += .25
  
         # See if we are on the ground.
         if self.rect.y >= SCREEN_HEIGHT - self.rect.height and self.change_y >= 0:
@@ -301,17 +338,29 @@ class Player(pygame.sprite.Sprite):
  
     # Player-controlled movement:
     def go_left(self):
-        self.change_x = -5
+        self.change_x = -3
+        self.direction = 1
  
     def go_right(self):
-        self.change_x = 5
+        self.change_x = 3
+        self.direction = 0
  
     def stop(self):
         self.change_x = 0
-    def go_punch(self):
-        self.punching = True
-    def stop_punch(self):
-        self.punching = False
+        
+    def go_attack(self):
+        self.attacking = True
+        bullet = Bullet(self.direction)
+        if self.direction == 0:
+            bullet.rect.x = self.rect.right
+        else:
+            bullet.rect.x = self.rect.left
+        bullet.rect.y = self.rect.y + 10
+        self.game.active_sprite_list.add(bullet)
+        self.game.bullet_list.add(bullet)
+        
+    def stop_attack(self):
+        self.attacking = False
 
 class Health(pygame.sprite.Sprite):
     #health bar constructor class, made by me
@@ -322,24 +371,38 @@ class Health(pygame.sprite.Sprite):
         self.rect.x = x 
         self.rect.y = y 
         self.game = game
-        self.hp =hp
-    def track_health(self):
-        if self.hp < 1:
-            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/0.png")
-        elif self.hp < 5:
-            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/1.png")
-        elif self.hp < 10:
-            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/2.png")
-        elif self.hp < 15:
-            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/3.png")
-
-
-            
-
+        self.hp = hp
         
-
-
-
+    def track_health(self):
+        if self.hp <= 0:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/0.png")
+        elif self.hp <= 5:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/1.png")
+        elif self.hp <= 10:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/2.png")
+        elif self.hp <= 15:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/3.png")
+        elif self.hp <= 20:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/4.png")
+        elif self.hp <= 25:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/5.png")
+        else:
+            self.image = pygame.image.load("FinalProject/resources/graphics/Hearts/6.png")
+    
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, direction):
+        super().__init__()
+        self.image = pygame.Surface([4, 10])
+        self.image.fill(BLUE)
+        self.direction = direction
+        self.rect = self.image.get_rect()
+ 
+    def update(self):
+        if self.direction == 0:
+            self.rect.x += 3
+        else:
+            self.rect.x -= 3
+ 
 class Boss(pygame.sprite.Sprite):
     def __init__(self, game, x, y):
         super().__init__()
@@ -355,15 +418,17 @@ class Boss(pygame.sprite.Sprite):
         self.rect.y = y
         self.change_x = 0
         self.change_y = 0
-        self.health = 1000
-        self.running  = False
-        self.jumping = False
-        
-    #this is a function for storing the positions of a sprite
-    #within a spritesheet
+        self.hp = 1000
+        self.start_x = x
+        self.start_y = y
+        self.running = False
+        self.speed = 3
+                
+    # this is a function for storing the positions of a sprite
+    # within a spritesheet
     def load_images(self):
         # (x,y,height of sprite, width of sprite)
-        self.idle_frames = [self.game.ghostsprites.get_image(  0, 128, 48, 64),
+        self.idle_frames = [self.game.ghostsprites.get_image(  -5, 128, 48, 64),
                             self.game.ghostsprites.get_image(  48,128, 48, 64),
                             self.game.ghostsprites.get_image(  96, 128, 48, 64)]
         for frame in self.idle_frames:
@@ -391,54 +456,69 @@ class Boss(pygame.sprite.Sprite):
                 else:
                     self.image = self.run_frames_l[self.current_frame]
                 self.rect.bottom = bottom
-        elif not self.jumping:
+        else:
             if now - self.last_update > 200:
                 self.last_update = now
                 self.current_frame = (self.current_frame + 1) % len(self.idle_frames)
                 bottom = self.rect.bottom
                 self.image = self.idle_frames[self.current_frame]
                 self.rect.bottom = bottom
-        else:
-            if now - self.last_update > 350:
-                self.last_update = now
-                self.current_frame = (self.current_frame + 1) % len(self.jump_frames)
-                bottom = self.rect.bottom
-                self.image = self.jump_frames[self.current_frame]
-                self.rect.bottom = bottom
+                
+    def follow(self):
+        # find normalized direction vector (dx, dy) between enemy and player
+        dx = self.rect.center[0] - self.game.player.rect.x
+        dy = self.rect.center[1] - self.game.player.rect.y
+        dist = math.hypot(dx, dy)
+        if dist > 2:
+            dx = dx / dist
+            dy = dy / dist
+            self.rect.x -= dx * self.speed
+            self.rect.y -= dy * self.speed
+            
+    def reset(self):
+        self.rect.x = self.start_x
+        self.rect.y = self.start_y
+                        
     def update(self):
-        # Gravity
-        #self.calc_grav()
-
-        if self.change_x == 0 or self.jumping == True:
-            self.running = False
-        else:
-            self.running = True
-
         # Move left/right
         self.rect.x += self.change_x
+        self.rect.y += self.change_y
+        
+
         
         if self.rect.right < 0:
             self.rect.x = SCREEN_WIDTH
             
         if self.rect.left > SCREEN_WIDTH:
             self.rect.right = 0
-        self.animate()
-
             
+        bullet_list = pygame.sprite.spritecollide(self, self.game.bullet_list, False)
+        
+        for bullet in bullet_list:
+            for bullet in bullet_list:
+                self.game.bullet_list.remove(bullet)
+                self.game.active_sprite_list.remove(bullet)
+                self.hp -= 10
+                print(self.hp)
+            if bullet.rect.y < -10:
+                self.game.bullet_list.remove(bullet)
+                self.game.active_sprite_list.remove(bullet)
+                
+        self.animate()
+        self.follow()
 
 class Platform(pygame.sprite.Sprite):
     #platform constructor class
     def __init__(self, width, height, x, y):
         super().__init__()
         self.image = pygame.Surface([width, height])
-        self.image.fill(GREEN)
+        self.image.fill(BLACK)
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
  
 def main():
     #the main loop
-  
     game = Game()
 
     game.show_start_screen()
